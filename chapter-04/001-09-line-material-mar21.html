@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+    <title>Example 04.09 - Linematerial - koch line - March 19th</title>
+    <script type="text/javascript" src="../../libs/three.js"></script>
+    <script type="text/javascript" src="../../libs/stats.js"></script>
+	<script src="../../../libs/dat.GUI.js"></script>
+    <style>
+        body {
+            /* set margin to 0 and overflow to hidden, to go fullscreen */
+            margin: 0;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body>
+
+<div id="Stats-output">
+</div>
+<!-- Div which will hold the Output -->
+<div id="WebGL-output">
+</div>
+
+<!-- Javascript code that runs our Three.js examples -->
+<script type="text/javascript">
+
+    // once everything is loaded, we run our Three.js stuff.
+    function init() {
+        var stats = initStats();
+		var controls;
+		
+		controls=new function(){
+			this.dx=8;
+			this.dy=8;
+			this.dz=8;
+			//exercise together
+			this.px=0;
+			this.py=4;
+			this.pz=-8;
+		}
+		
+		{//gui controls
+			gui=new dat.GUI();
+			
+			var folderCamera=gui.addFolder("Camera Controls");
+			folderCamera.add(controls,'dx',0,200).onChange ((c) => (camera.position.x = c));
+		}
+
+        {// create a scene, that will hold all our elements such as objects, cameras and lights.
+        var scene = new THREE.Scene();
+
+        // create a camera, which defines where we're looking at.
+        var camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+        // create a render and set the size
+        var renderer = new THREE.WebGLRenderer();
+
+        renderer.setClearColor(new THREE.Color(0x000000, 1.0));
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMapEnabled = true;
+		}
+
+        {// position and point the camera to the center of the scene
+        camera.position.x = -40;
+        camera.position.y = 60;
+        camera.position.z = 40;
+        camera.lookAt(scene.position);
+		}
+
+        {// add subtle ambient lighting
+        var ambientLight = new THREE.AmbientLight(0x0c0c0c);
+        scene.add(ambientLight);
+		}
+
+        {// add spotlight for the shadows
+        var spotLight = new THREE.SpotLight(0xffffff);
+        spotLight.position.set(-40, 60, -10);
+        spotLight.castShadow = true;
+        scene.add(spotLight);
+
+		var points=[];
+		}
+		
+		{// draw sierpinski
+		
+		var v0=new THREE.Vector3(0,0,0);
+		var v1=new THREE.Vector3(0,0,40);
+		
+		var v2=new THREE.Vector3(30,0,0);
+		var v3=new THREE.Vector3(0,50,0);
+		
+		var n=5;
+		drawSierpinskiGasket(v0,v1,v2,v3,n);
+		}
+
+        {// add the output of the renderer to the html element
+        document.getElementById("WebGL-output").appendChild(renderer.domElement);
+
+        // call the render function
+        var step = 0;
+        render();
+		}
+
+		function getTetrahedron(v0,v1,v2,v3){
+			//Feb.14 - Add a custom Geometry ( tetrahedron )
+			var vertices = [v0,v1,v2,v3], faces = [];
+			
+			//create faces array
+			faces.push(new THREE.Face3(0,3,1)); //F_0
+			faces.push(new THREE.Face3(2,1,3)); //F_1
+			faces.push(new THREE.Face3(0,1,2)); //F_2
+			faces.push(new THREE.Face3(0,2,3)); //F_3
+			
+			//Create Geometry
+			var tetrahedronGeo=new THREE.Geometry();
+			tetrahedronGeo.vertices=vertices;
+			tetrahedronGeo.faces =faces;
+			tetrahedronGeo.computeFaceNormals();
+			
+			var tetrahedronMat =new THREE.MeshLambertMaterial({color:0x0000FF});
+			var tetrahedron=new THREE.Mesh(tetrahedronGeo,tetrahedronMat);
+			//scene.add(tetrahedron);
+			return tetrahedron;
+		}
+		
+		function drawSierpinskiGasket(v0,v1,v2,v3,n){
+			if(n<=1){
+				scene.add(getTetrahedron(v0,v1,v2,v3));
+			} else {
+				var v01=v0.clone().lerp(v1,.5);
+				var v02=v0.clone().lerp(v2,.5);
+				var v03=v0.clone().lerp(v3,.5);
+				var v12=v1.clone().lerp(v2,.5);
+				var v13=v1.clone().lerp(v3,.5);
+				var v23=v2.clone().lerp(v3,.5);
+				
+				drawSierpinskiGasket(v0,v01,v02,v03,n-1);
+				drawSierpinskiGasket(v01,v1,v12,v13,n-1);
+				drawSierpinskiGasket(v02,v12,v2,v23,n-1);
+				drawSierpinskiGasket(v03,v13,v23,v3,n-1);
+			}
+		}
+		
+        function render() {
+            stats.update();
+            //line2.rotation.y = step += 0.01;
+			scene.rotation.y = step += 0.01;
+			camera.lookAt(scene.position);
+
+            requestAnimationFrame(render);
+            renderer.render(scene, camera);
+        }
+
+        function initStats() {
+
+            var stats = new Stats();
+
+            stats.setMode(0); // 0: fps, 1: ms
+
+            // Align top-left
+            stats.domElement.style.position = 'absolute';
+            stats.domElement.style.left = '0px';
+            stats.domElement.style.top = '0px';
+
+            document.getElementById("Stats-output").appendChild(stats.domElement);
+
+            return stats;
+        }
+
+	};
+	
+    window.onload = init;
+
+
+</script>
+</body>
+</html>
