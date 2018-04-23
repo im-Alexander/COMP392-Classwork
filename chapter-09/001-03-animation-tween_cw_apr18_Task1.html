@@ -6,6 +6,7 @@
     <title>Alexander Sikalevski - cw apr.18 - Task 1 </title>
     <script type="text/javascript" src="../libs/three.js"></script>
     <script type="text/javascript" src="../libs/PLYLoader.js"></script>
+	<script type="text/javascript" src="../libs/OrbitControls.js"></script>
 
     <script type="text/javascript" src="../libs/stats.js"></script>
     <script type="text/javascript" src="../libs/dat.gui.js"></script>
@@ -29,6 +30,8 @@
 <!-- Javascript code that runs our Three.js examples -->
 <script type="text/javascript">
 
+	var controls;
+
     // once everything is loaded, we run our Three.js stuff.
     function init() {
 
@@ -45,6 +48,14 @@
         webGLRenderer.setClearColor(new THREE.Color(0xffffff, 1.0));
         webGLRenderer.setSize(window.innerWidth, window.innerHeight);
         webGLRenderer.shadowMapEnabled = true;
+		
+		controls = new THREE.OrbitControls( camera, webGLRenderer.domElement );
+		controls.enableDamping = true; // an animation loop is required when either damping or auto-rotation are enabled
+		controls.dampingFactor = 0.25;
+		controls.panningMode = THREE.HorizontalPanning; // default is THREE.ScreenSpacePanning
+		controls.minDistance = 10;
+		controls.maxDistance = 50;
+		controls.maxPolarAngle = Math.PI / 2;
 		
 		var axesHelper = new THREE.AxisHelper( 5 );
 		scene.add( axesHelper );
@@ -67,14 +78,6 @@
         // call the render function
         var step = 0;
 
-
-        // setup the control gui
-        var controls = new function () {
-            // we need the first child, since it's a multimaterial
-
-
-        };
-
         var pointCloud = new THREE.Object3D();
         var loadedGeometry;
 
@@ -82,52 +85,39 @@
         // create a tween
         // http://sole.github.io/tween.js/examples/03_graphs.html
 		
-		var startOptions={
-			px:0,py:0,pz:0,
-			sx:1,sy:1,sz:1
-		}
-		var endOptions={
-			px:10,py:30,pz:-10,
-			sx:2,sy:.5,sz:3
-		}
-		
-        var posSrc = {pos: 0};
-        var tween = new TWEEN.Tween(startOptions).to(endOptions, 5000);
-		tween.onUpdate(onUpdate2);
+        var posSrc = {pos: 1};
+        //var tween = new TWEEN.Tween(startOptions).to(endOptions, 5000);
+        var tween = new TWEEN.Tween(posSrc).to({pos: 0}, 5000);
         
 		
 		tween.easing(TWEEN.Easing.Sinusoidal.InOut);
 
-        var tweenBack = new TWEEN.Tween(posSrc).to({pos: 0}, 5000);
+        var tweenBack = new TWEEN.Tween(posSrc).to({pos: 1}, 5000);
         tweenBack.easing(TWEEN.Easing.Sinusoidal.InOut);
 
         tween.chain(tweenBack);
         tweenBack.chain(tween);
-
-        var onUpdate = function () {
-            var count = 0;
-            var pos = this.pos;
-
-            loadedGeometry.vertices.forEach(function (e) {
-                var newY = ((e.y + 3.22544) * pos) - 3.22544;
-                pointCloud.geometry.vertices[count++].set(e.x, newY, e.z);
-            });
-
-            pointCloud.sortParticles = true;
-        };
 		
-		var boxGeo = new THREE.SphereGeometry(1,1,1);
+		var boxGeo = new THREE.BoxGeometry(1,1,1);
 
 		var onUpdate2 = function () {
             var count = 0;
             var pos = this.pos;
+			var opts=this.startOptions;
+			//boxMesh.geometry.vertices=[];
+			
+			//console.log("pos:",pos);
 
             loadedGeometry.vertices.forEach(function (e) {
                 var newX = ((e.x + 10) * pos) - 10;
-				var newY = ((e.y + 30) * pos) - 30;
+				var newY = ((e.y - 10) * pos) + 10;
 				var newZ = ((e.z - 10) * pos) + 10;
-                boxMesh.geometry.vertices[count++].set(newX, newY, newZ);
+				//console.log("newX : "+newX+"\nnewY : "+newY+"\nnewZ : "+newZ);
+                loadedMesh.geometry.vertices[count++].set(newX, newY, newZ);
+				//loadedMesh.position.set(newX, newY, newZ);
+				
             });
+			loadedMesh.geometry.verticesNeedUpdate=true;
 
             //pointCloud.sortParticles = true;
         };
@@ -138,11 +128,11 @@
 		loadedGeometry=boxGeo.clone();
 		var loadedMesh = boxMesh.clone();
 		
-		tween.start();
 		scene.add(loadedMesh);
 		
 		tween.onUpdate(onUpdate2);
         tweenBack.onUpdate(onUpdate2);
+		tween.start();
 
 /*
         var loader = new THREE.PLYLoader();
@@ -168,8 +158,8 @@
 */
 
         var clock=new THREE.Clock();
-		var vStart=new THREE.Vector3(startOptions.px, startOptions.py, startOptions.pz);
-		var vEnd=new THREE.Vector3(endOptions.px, endOptions.py, endOptions.pz);
+		//var vStart=new THREE.Vector3(startOptions.px, startOptions.py, startOptions.pz);
+		//var vEnd=new THREE.Vector3(endOptions.px, endOptions.py, endOptions.pz);
 		render();
 
         // from THREE.js examples
@@ -199,11 +189,13 @@
             stats.update();
 			var t=clock.getDelta();
 			
-			var newPos=vStart.clone().lerp(vEnd,t/5);
-			boxMesh.position=newPos;
-            //TWEEN.update();
+			//var newPos=vStart.clone().lerp(vEnd,t/5);
+			//boxMesh.position=newPos;
+            TWEEN.update();
             requestAnimationFrame(render);
             webGLRenderer.render(scene, camera);
+			
+			controls.update();
         }
 
         function initStats() {
